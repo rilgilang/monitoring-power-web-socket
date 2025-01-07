@@ -1,35 +1,30 @@
 const { WebSocketServer } = require('ws');
 
-let wss;
+// Create a WebSocket server
+const wss = new WebSocketServer({ port: 8080 });
 
-module.exports = (req, res) => {
-    if (!wss) {
-        // Create a WebSocket server if it doesn't exist
-        wss = new WebSocketServer({ noServer: true });
+console.log("WebSocket server started on ws://localhost:8080");
 
-        console.log("WebSocket server initialized");
+// Handle connection
+wss.on('connection', (ws) => {
+    console.log("Client connected");
 
-        wss.on('connection', (ws) => {
-            console.log("Client connected");
+    // Send a welcome message
+    ws.send(JSON.stringify({ type: 'welcome', message: 'Connected to WebSocket server!' }));
 
-            ws.send(JSON.stringify({ type: 'welcome', message: 'Connected to WebSocket server!' }));
-
-            ws.on('message', (message) => {
-                console.log(`Received: ${message}`);
-                wss.clients.forEach((client) => {
-                    if (client.readyState === ws.OPEN) {
-                        client.send(JSON.stringify({ type: 'broadcast', message: message.toString() }));
-                    }
-                });
-            });
-
-            ws.on('close', () => {
-                console.log("Client disconnected");
-            });
+    // Handle incoming messages
+    ws.on('message', (message) => {
+        console.log(`Received: ${message}`);
+        // Broadcast the message to all connected clients
+        wss.clients.forEach((client) => {
+            if (client.readyState === ws.OPEN) {
+                client.send(JSON.stringify({ type: 'broadcast', message: message.toString() }));
+            }
         });
-    }
+    });
 
-    if (req.method === 'GET') {
-        res.status(200).send('WebSocket server is running.');
-    }
-};
+    // Handle disconnection
+    ws.on('close', () => {
+        console.log("Client disconnected");
+    });
+});
